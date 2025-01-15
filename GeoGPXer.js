@@ -154,7 +154,7 @@ var GeoGPXer = (function() {
     if (extensions.length > 0) {
       for (const ext of extensions[0].childNodes) {
         if (ext.nodeType === Node.ELEMENT_NODE) {
-          props[`extension_${ext.tagName}`] = ext.textContent;
+          props[`ex_${ext.tagName}`] = ext.textContent;
         }
       }
     }
