@@ -26,7 +26,7 @@ To use GeoGPXer, create an instance of `GeoGPXer` and use its methods to perform
 var geoGPXer = new GeoGPXer(); // Create a new instance of GeoGPXer
 
 // Sample GPX data input
-const gpxData = `...your GPX data...`;
+const gpxData = `...GPX data string...`;
 
 // Parse the GPX data
 const xmlDoc = geoGPXer.read(gpxData);
@@ -43,4 +43,7 @@ console.log(geoJson);
 - extractProperties(node): Extracts properties from a GPX node, including handling of <extensions> by prefixing property names.
 
 ## Acknowledgments
-The code in this project is derived from the logic of gpx2geojson.
+The code in this project is derived from the logic of [gpx2geojson](https://github.com/M-Reimer/gpx2geojson) by M-Reimer.
+
+## Project Home
+https://github.com/JS55CT/GeoGPXer
