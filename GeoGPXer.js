@@ -1,4 +1,13 @@
-/**
+// ==UserScript==
+// @name                GeoGPXer
+// @namespace           https://github.com/JS55CT
+// @description         GeoGPXer is a JavaScript library designed to convert GPX data into GeoJSON format efficiently. It supports the conversion of waypoints, tracks, and routes, with additional handling for GPX extensions.
+// @version             1.0.0
+// @author              JS55CT
+// @license             GNU GPLv3
+// ==/UserScript==
+
+/***********************************************************
  * ## Project Home < https://github.com/JS55CT/GeoGPXer >
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -11,7 +20,7 @@
  *  GNU General Public License for more details.
  *
  *  Derived from logic of https://github.com/M-Reimer/gpx2geojson/tree/master
- */
+ **************************************************************/
 
 /**
  * @desc The GeoGPXer namespace.
