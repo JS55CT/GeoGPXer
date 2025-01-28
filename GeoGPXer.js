@@ -2,9 +2,10 @@
 // @name                GeoGPXer
 // @namespace           https://github.com/JS55CT
 // @description         GeoGPXer is a JavaScript library designed to convert GPX data into GeoJSON format efficiently. It supports the conversion of waypoints, tracks, and routes, with additional handling for GPX extensions.
-// @version             1.0.0
+// @version             1.1.1
 // @author              JS55CT
 // @license             GNU GPLv3
+// @match              *://this-library-is-not-supposed-to-run.com/*
 // ==/UserScript==
 
 /***********************************************************
@@ -20,7 +21,9 @@
  *  GNU General Public License for more details.
  *
  *  Derived from logic of https://github.com/M-Reimer/gpx2geojson/tree/master
- **************************************************************/
+ *
+ *  V 1.1.1 - Added support for Z or Elevation in output.
+**************************************************************/
 
 /**
  * @desc The GeoGPXer namespace.
@@ -48,20 +51,21 @@ var GeoGPXer = (function() {
   /**
    * @desc Converts an XML Document to GeoJSON FeatureCollection.
    * @param {Document} document - Parsed XML document of GPX data.
+   * @param {Boolean} includeElevation - Whether to include elevation data in coordinates.
    * @return {Object} GeoJSON FeatureCollection.
    */
-  GeoGPXer.prototype.toGeoJSON = function(document) {
+  GeoGPXer.prototype.toGeoJSON = function(document, includeElevation = false) {
     const features = [];
     for (const n of document.firstChild.childNodes) {
       switch (n.tagName) {
         case "wpt":
-          features.push(this.wptToPoint(n));
+          features.push(this.wptToPoint(n, includeElevation));
           break;
         case "trk":
-          features.push(this.trkToMultiLineString(n));
+          features.push(this.trkToMultiLineString(n, includeElevation));
           break;
         case "rte":
-          features.push(this.rteToLineString(n));
+          features.push(this.rteToLineString(n, includeElevation));
           break;
       }
     }
@@ -74,13 +78,20 @@ var GeoGPXer = (function() {
   /**
    * @desc Extracts coordinates from a node.
    * @param {Node} node - GPX node containing coordinates.
-   * @return {Array} Array of coordinates [longitude, latitude].
+   * @param {Boolean} includeElevation - Whether to include elevation data.
+   * @return {Array} Array of coordinates [longitude, latitude, elevation].
    */
-  GeoGPXer.prototype.coordFromNode = function(node) {
-    return [
+  GeoGPXer.prototype.coordFromNode = function(node, includeElevation = false) {
+    const coords = [
       parseFloat(node.getAttribute("lon")),
       parseFloat(node.getAttribute("lat"))
     ];
+    if (includeElevation) {
+      const eleNode = node.getElementsByTagName("ele")[0];
+      const elevation = eleNode ? parseFloat(eleNode.textContent) : 0;
+      coords.push(elevation);
+    }
+    return coords;
   };
 
   /**
@@ -104,10 +115,11 @@ var GeoGPXer = (function() {
   /**
    * @desc Converts a waypoint node to a GeoJSON Point feature.
    * @param {Node} node - GPX waypoint node.
+   * @param {Boolean} includeElevation - Whether to include elevation data.
    * @return {Object} GeoJSON Point feature.
    */
-  GeoGPXer.prototype.wptToPoint = function(node) {
-    const coord = this.coordFromNode(node);
+  GeoGPXer.prototype.wptToPoint = function(node, includeElevation = false) {
+    const coord = this.coordFromNode(node, includeElevation);
     const props = this.extractProperties(node);
     return this.makeFeature("Point", coord, props);
   };
@@ -115,9 +127,10 @@ var GeoGPXer = (function() {
   /**
    * @desc Converts a track node to a GeoJSON MultiLineString feature.
    * @param {Node} node - GPX track node.
+   * @param {Boolean} includeElevation - Whether to include elevation data.
    * @return {Object} GeoJSON MultiLineString feature.
    */
-  GeoGPXer.prototype.trkToMultiLineString = function(node) {
+  GeoGPXer.prototype.trkToMultiLineString = function(node, includeElevation = false) {
     const coordslst = [];
     const props = this.extractProperties(node);
     for (const n of node.childNodes) {
@@ -125,7 +138,7 @@ var GeoGPXer = (function() {
         const coords = [];
         coordslst.push(coords);
         for (const trkpt of n.getElementsByTagName("trkpt")) {
-          coords.push(this.coordFromNode(trkpt));
+          coords.push(this.coordFromNode(trkpt, includeElevation));
         }
       }
     }
@@ -135,14 +148,15 @@ var GeoGPXer = (function() {
   /**
    * @desc Converts a route node to a GeoJSON LineString feature.
    * @param {Node} node - GPX route node.
+   * @param {Boolean} includeElevation - Whether to include elevation data.
    * @return {Object} GeoJSON LineString feature.
    */
-  GeoGPXer.prototype.rteToLineString = function(node) {
+  GeoGPXer.prototype.rteToLineString = function(node, includeElevation = false) {
     const coords = [];
     const props = this.extractProperties(node);
     for (const n of node.childNodes) {
       if (n.tagName === "rtept") {
-        coords.push(this.coordFromNode(n));
+        coords.push(this.coordFromNode(n, includeElevation));
       }
     }
     return this.makeFeature("LineString", coords, props);
@@ -172,4 +186,5 @@ var GeoGPXer = (function() {
   };
 
   return GeoGPXer;  // Return the GeoGPXer constructor
+
 })();
