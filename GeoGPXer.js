@@ -2,36 +2,43 @@
 // @name                GeoGPXer
 // @namespace           https://github.com/JS55CT
 // @description         GeoGPXer is a JavaScript library designed to convert GPX data into GeoJSON format efficiently. It supports the conversion of waypoints, tracks, and routes, with additional handling for GPX extensions.
-// @version             1.1.1
+// @version             2.0.0
 // @author              JS55CT
-// @license             GNU GPLv3
+// @license             MIT
 // @match              *://this-library-is-not-supposed-to-run.com/*
 // ==/UserScript==
 
 /***********************************************************
  * ## Project Home < https://github.com/JS55CT/GeoGPXer >
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ *  MIT License
+ * Copyright (c) 2022 hu de yi
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- *  Derived from logic of https://github.com/M-Reimer/gpx2geojson/tree/master
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  *
- *  V 1.1.1 - Added support for Z or Elevation in output.
-**************************************************************/
+ *  Derived from logic of https://github.com/M-Reimer/gpx2geojson/tree/master (LGPL-3.0 license)
+ **************************************************************/
 
 /**
  * @desc The GeoGPXer namespace.
  * @namespace
  * @global
  */
-var GeoGPXer = (function() {
-
+var GeoGPXer = (function () {
   // Define the GeoGPXer constructor
   function GeoGPXer(obj) {
     if (obj instanceof GeoGPXer) return obj;
@@ -44,8 +51,26 @@ var GeoGPXer = (function() {
    * @param {String} gpxText - The GPX data as a string.
    * @return {Document} Parsed XML Document.
    */
-  GeoGPXer.prototype.read = function(gpxText) {
-    return new DOMParser().parseFromString(gpxText, "application/xml");
+  GeoGPXer.prototype.read = function (gpxText) {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(gpxText, "application/xml");
+
+    // Check for parsing errors by looking for parser error tags
+    const parseErrors = xmlDoc.getElementsByTagName("parsererror");
+    if (parseErrors.length > 0) {
+      // If there are parsing errors, log them and throw an error
+      const errorMessages = Array.from(parseErrors)
+        .map((errorElement, index) => {
+          return `Parsing Error ${index + 1}: ${errorElement.textContent}`;
+        })
+        .join("\n");
+
+      console.error(errorMessages);
+      throw new Error("Failed to parse GPX. See console for details.");
+    }
+
+    // If parsing is successful, return the parsed XML document
+    return xmlDoc;
   };
 
   /**
@@ -54,7 +79,7 @@ var GeoGPXer = (function() {
    * @param {Boolean} includeElevation - Whether to include elevation data in coordinates.
    * @return {Object} GeoJSON FeatureCollection.
    */
-  GeoGPXer.prototype.toGeoJSON = function(document, includeElevation = false) {
+  GeoGPXer.prototype.toGeoJSON = function (document, includeElevation = false) {
     const features = [];
     for (const n of document.firstChild.childNodes) {
       switch (n.tagName) {
@@ -71,7 +96,7 @@ var GeoGPXer = (function() {
     }
     return {
       type: "FeatureCollection",
-      features: features
+      features: features,
     };
   };
 
@@ -81,11 +106,8 @@ var GeoGPXer = (function() {
    * @param {Boolean} includeElevation - Whether to include elevation data.
    * @return {Array} Array of coordinates [longitude, latitude, elevation].
    */
-  GeoGPXer.prototype.coordFromNode = function(node, includeElevation = false) {
-    const coords = [
-      parseFloat(node.getAttribute("lon")),
-      parseFloat(node.getAttribute("lat"))
-    ];
+  GeoGPXer.prototype.coordFromNode = function (node, includeElevation = false) {
+    const coords = [parseFloat(node.getAttribute("lon")), parseFloat(node.getAttribute("lat"))];
     if (includeElevation) {
       const eleNode = node.getElementsByTagName("ele")[0];
       const elevation = eleNode ? parseFloat(eleNode.textContent) : 0;
@@ -101,14 +123,14 @@ var GeoGPXer = (function() {
    * @param {Object} props - Properties of the feature.
    * @return {Object} GeoJSON feature.
    */
-  GeoGPXer.prototype.makeFeature = function(type, coords, props) {
+  GeoGPXer.prototype.makeFeature = function (type, coords, props) {
     return {
       type: "Feature",
       geometry: {
         type: type,
-        coordinates: coords
+        coordinates: coords,
       },
-      properties: props
+      properties: props,
     };
   };
 
@@ -118,7 +140,7 @@ var GeoGPXer = (function() {
    * @param {Boolean} includeElevation - Whether to include elevation data.
    * @return {Object} GeoJSON Point feature.
    */
-  GeoGPXer.prototype.wptToPoint = function(node, includeElevation = false) {
+  GeoGPXer.prototype.wptToPoint = function (node, includeElevation = false) {
     const coord = this.coordFromNode(node, includeElevation);
     const props = this.extractProperties(node);
     return this.makeFeature("Point", coord, props);
@@ -130,7 +152,7 @@ var GeoGPXer = (function() {
    * @param {Boolean} includeElevation - Whether to include elevation data.
    * @return {Object} GeoJSON MultiLineString feature.
    */
-  GeoGPXer.prototype.trkToMultiLineString = function(node, includeElevation = false) {
+  GeoGPXer.prototype.trkToMultiLineString = function (node, includeElevation = false) {
     const coordslst = [];
     const props = this.extractProperties(node);
     for (const n of node.childNodes) {
@@ -151,7 +173,7 @@ var GeoGPXer = (function() {
    * @param {Boolean} includeElevation - Whether to include elevation data.
    * @return {Object} GeoJSON LineString feature.
    */
-  GeoGPXer.prototype.rteToLineString = function(node, includeElevation = false) {
+  GeoGPXer.prototype.rteToLineString = function (node, includeElevation = false) {
     const coords = [];
     const props = this.extractProperties(node);
     for (const n of node.childNodes) {
@@ -167,7 +189,7 @@ var GeoGPXer = (function() {
    * @param {Node} node - GPX node.
    * @return {Object} Properties extracted from the node.
    */
-  GeoGPXer.prototype.extractProperties = function(node) {
+  GeoGPXer.prototype.extractProperties = function (node) {
     const props = {};
     for (const n of node.childNodes) {
       if (n.nodeType === Node.ELEMENT_NODE && n.tagName !== "extensions") {
@@ -185,6 +207,5 @@ var GeoGPXer = (function() {
     return props;
   };
 
-  return GeoGPXer;  // Return the GeoGPXer constructor
-
+  return GeoGPXer; // Return the GeoGPXer constructor
 })();
